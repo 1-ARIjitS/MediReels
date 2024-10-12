@@ -1,15 +1,10 @@
-# generate_images_from_srt_with_mistral.py
-
 import os
 import srt
 import time
 from dotenv import load_dotenv
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_core.prompts import PromptTemplate
 from langchain_mistralai import ChatMistralAI
 
-# Load environment variables from .env file
-load_dotenv()
 
 def parse_srt(file_path):
     """
@@ -62,7 +57,7 @@ Image Prompt:
     )
 
     # Create the LLM chain
-    llm_chain = LLMChain(prompt=prompt_template, llm=llm)
+    llm_chain = prompt_template | llm
     return llm_chain
 
 def generate_image(index, prompt):
@@ -123,7 +118,7 @@ def main():
     # Record the start time
     start_time = time.time()
 
-    # Path to your SRT file
+    # Path to your SRT file # TODO: save to results dir
     srt_file_path = './results/output2.srt'  # Replace with the path to your SRT file
 
     # Parse the SRT file

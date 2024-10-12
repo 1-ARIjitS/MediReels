@@ -1,7 +1,14 @@
 from pydantic import BaseModel, Field
 from typing import List
+import os
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import PromptTemplate
+import srt
+import requests
+from PIL import Image
+from io import BytesIO
+import time
+
 
 llm = ChatMistralAI(
     model="mistral-small-latest",
@@ -31,6 +38,10 @@ class ArticleTopic(BaseModel):
         #     "A thought-provoking, exploratory question related to the topic that encourages viewers to watch more videos on the subject. "
         #     "It should introduce a related but distinct aspect of the topic not covered in the script and entice viewers to engage with additional content."
         # ),
+    )
+    caption: str = Field(
+        ...,
+        title="Social Media Caption",
     )
 
     def __str__(self):
@@ -77,12 +88,13 @@ prompt_template = PromptTemplate(
    - These should be the most significant or intriguing points that would capture an audience's attention for short-form social media content like TikTok reels.
 
 3. **Educational Content:**
-   - For each of the five identified topics, write a concise (approximately 150 words) educational script suitable for a 1-minute video reel.
+   - For each of the five identified topics, write a (atleast 200 words) educational script suitable for a social media short form content.
    - Each script should:
      - Teach the audience something valuable or insightful about the topic.
      - Use clear and engaging language appropriate for a general audience.
      - Highlight interesting facts, explanations, or tips related to the topic.
      - Encourage the audience to think more deeply or take action related to the subject.
+     - Do not provide hash tags in the script.
 
 4. **Reflection Questions:**
    - For each of the five topics, create a thought-provoking, open-ended question that encourages critical thinking, reflection, or discussion.
@@ -90,6 +102,10 @@ prompt_template = PromptTemplate(
      - Be related directly to the corresponding topic.
      - Invite diverse perspectives and engagement.
      - Stimulate deeper understanding or exploration of the topic.
+
+5. **Social media caption for video:**
+    - Write a concise social media caption for the video that would be used to promote the video on Instagram or TikTok.
+    - This should include hash tags and emojis in addition to the caption.
 
 **Additional Guidelines:**
 
@@ -110,8 +126,108 @@ def summarize_article(article: str) -> ArticleTopics:
 def query_is_valid(topic: str) -> bool:
     response =  llm.invoke(f"Is the query relevant to healthcare? Return True if yes, False otherwise. \n Query: {topic}")
     content = response.content.lower()
-    return "true" in content
+    return "true" in content or "yes" in content
 
+
+def parse_srt(file_path):
+    """
+    Parse the SRT file and return a list of subtitles.
+    """
+    with open(file_path, 'r', encoding='utf-8') as file:
+        srt_content = file.read()
+    subtitles = list(srt.parse(srt_content))
+    parsed_subtitles = []
+    for sub in subtitles:
+        parsed_subtitles.append({
+            'index': sub.index,
+            'start_time': sub.start,
+            'end_time': sub.end,
+            'content': sub.content.replace('\n', ' ')
+        })
+    return parsed_subtitles
+
+def generate_prompt(subtitle_text, llm_chain):
+    """
+    Generate an image prompt based on the subtitle text using the LLM chain.
+    """
+    input_text = subtitle_text.strip()
+    prompt = llm_chain.invoke({"subtitle": input_text}).content
+    return prompt.strip()
+
+def load_mistral_chain():
+    """
+    Load the Mistral LLM chain with the specified prompt template.
+    """
+    # Define the prompt template
+    prompt_template = PromptTemplate(
+        input_variables=["subtitle"],
+        template="""
+You are an AI assistant that generates detailed and creative image prompts for an AI image generator based on subtitles from a video script.
+
+Given the subtitle:
+"{subtitle}"
+
+Generate a clear, informative, and engaging image prompt that accurately represents the key concepts of the subtitle. Avoid adding unnecessary or bizarre elements. Ensure the prompt is suitable for generating an image that effectively visualizes the subtitle's content.
+Image Prompt:
+""".strip()
+    )
+
+    # Create the LLM chain
+    llm_chain = prompt_template | llm
+    return llm_chain
+
+transcriber_chain = load_mistral_chain()
+
+def generate_image(index, prompt):
+    """
+    Generate an image using the Hugging Face API and save it to the results/image/ folder.
+    """
+
+    API_URL = "https://a39i6lutw4cmb1ag.us-east-1.aws.endpoints.huggingface.cloud/"
+    headers = {
+        "Accept": "image/png",
+        "Content-Type": "application/json",
+        # Include authorization if required
+        # "Authorization": f"Bearer {API_TOKEN}",
+    }
+
+    def query(payload):
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.content
+
+    try:
+        payload = {
+            "inputs": prompt,
+            "parameters": {}
+        }
+
+        output = query(payload)
+
+        # Open the image from bytes
+        image = Image.open(BytesIO(output))
+
+        # Ensure the results directory exists
+        image_dir = 'results/images/'
+        os.makedirs(image_dir, exist_ok=True)
+
+        # Generate a filename with index
+        image_filename = f"{index}.png"
+        image_path = os.path.join(image_dir, image_filename)
+
+        # Check if the file exists
+        if os.path.exists(image_path):
+            # Append a timestamp to make it unique
+            timestamp = int(time.time())
+            image_filename = f"{index}_{timestamp}.png"
+            image_path = os.path.join(image_dir, image_filename)
+
+        # Save the image
+        image.save(image_path)
+        print(f"Image saved to {image_path}\n")
+
+    except Exception as e:
+        print(f"Error generating image for subtitle {index}: {e}")
 
 if __name__ == "__main__":
     article = """8 Mental Health Trends to Watch in 2022

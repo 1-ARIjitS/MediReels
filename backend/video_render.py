@@ -12,6 +12,7 @@ class VideoCreator:
         self.srt_path = srt_path
         self.image_srt_path = image_srt_path
         self.output_path = output_path
+        self.audio = AudioFileClip(audio_path)
 
     def resize_and_crop_image(self, input_path, output_path):
         with Image.open(input_path) as img:
@@ -65,8 +66,9 @@ class VideoCreator:
             text_clip = TextClip(
                 formatted_text,
                 fontsize=int(self.target_size[1] * 0.05),
-                color='black',
-                stroke_color='yellow',
+                color='white',
+                stroke_color='orange',
+                bg_color='black',
                 stroke_width=2,
                 size=(max_width, None),
                 method='caption',
@@ -101,12 +103,12 @@ class VideoCreator:
         return image_timings
 
     def create_video_with_images_and_subtitles(self):
-        audio_clip = AudioFileClip(self.audio_path)
+        audio_clip = self.audio
         image_timings = self.parse_image_timings()
         image_clips = []
 
         for timing in image_timings:
-            image_path = os.path.join(self.output_folder, f"{timing['image_index']}.jpeg")
+            image_path = os.path.join(self.output_folder, f"{timing['image_index']}.png")
             if not os.path.isfile(image_path):
                 continue
 
@@ -137,12 +139,14 @@ class VideoCreator:
 
             video_clip = CompositeVideoClip(image_clips, size=video_size)
             video_clip = video_clip.set_audio(audio_clip)
+            
 
             subtitles = self.srt_to_moviepy_subtitles()
             final_video = CompositeVideoClip([video_clip, subtitles])
             final_video = final_video.set_duration(audio_clip.duration)
 
-            final_video.write_videofile(self.output_path, fps=24, codec='libx264', audio_codec='aac')
+            # final_video.write_videofile(self.output_path, fps=24, codec='mpeg4')
+            final_video.write_videofile(self.output_path, fps=24, codec='libx264')
 
     def render_video(self):
         self.resize_images_in_folder()

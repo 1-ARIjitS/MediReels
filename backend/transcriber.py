@@ -25,7 +25,7 @@ class Transcriber:
         with open(self.output_vtt_subtitles, "w", encoding="utf-8") as file:
             file.write(submaker.generate_subs(2))
         with open(self.output_vtt_images, "w", encoding="utf-8") as file:
-            file.write(submaker.generate_subs(20))
+            file.write(submaker.generate_subs(15))
 
         # Convert VTT to SRT for subtitles
         self.convert_vtt_to_srt(self.output_vtt_subtitles, self.srt_filename_subtitles)

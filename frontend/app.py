@@ -20,24 +20,30 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="💬"
 )
-# Display the logo at the top of the page
-st.image("logo.jpg", width=100)
 
-# Streamlit UI
-st.title("MediReels")
+# Center the logo and title using HTML within st.markdown
+st.markdown(
+    """
+    <div style='display: flex; justify-content: center; align-items: center; flex-direction: column;'>
+        <img src='logo.jpg' width='100' alt='MediReels Logo'>
+        <h1 style='text-align: center;'>MediReels</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# Divide the page into two columns
-col1, col2 = st.columns([2, 3])  # Adjust the width ratios as needed
-
-# Initialize session state to store search results, summaries, and video generation message
+# Initialize session state to store search results, summaries, and generated video path
 if 'search_results' not in st.session_state:
     st.session_state['search_results'] = None
 
 if 'summary' not in st.session_state:
     st.session_state['summary'] = None
 
-if 'video_generation_message' not in st.session_state:
-    st.session_state['video_generation_message'] = ""
+if 'generated_video_path' not in st.session_state:
+    st.session_state['generated_video_path'] = None
+
+# Divide the page into two columns
+col1, col2 = st.columns([2, 3])  # Adjust the width ratios as needed
 
 # First Column: Search Interface and Search Results
 with col1:
@@ -68,7 +74,7 @@ with col1:
                     # Parse and store the results in session state
                     st.session_state['search_results'] = response.json()
                     st.session_state['summary'] = None  # Reset summary when a new search is performed
-                    st.session_state['video_generation_message'] = ""  # Reset video generation message
+                    st.session_state['generated_video_path'] = None  # Reset generated video path
 
                     st.success(f"Search completed for topic: {topic}")
 
@@ -89,8 +95,12 @@ with col1:
 
     st.markdown("---")  # Separator
 
+    # Display Trending Topics
+    st.subheader("Trending Topics")
+    # You can customize this section to display trending topics as needed
+
     # Display Search Results
-    st.subheader(f"Trending topics")
+    # Uncomment the following line if you want to show "Search Results" instead of "Trending Topics"
     # st.header("Search Results")
 
     # Check if search results are available
@@ -99,8 +109,6 @@ with col1:
         results = search_results.get("results", [])
 
         if results:
-            # st.subheader(f"Results for: {search_results.get('query', topic)}")
-
             # Display each result as an expander with clickable titles and an "Explore" button
             for idx, result in enumerate(results):
                 with st.expander(f"{result['title']}"):
@@ -127,7 +135,7 @@ with col1:
                             
                             # Store the summary in session state
                             st.session_state['summary'] = summary
-                            st.session_state['video_generation_message'] = ""  # Reset video generation message
+                            st.session_state['generated_video_path'] = None  # Reset generated video path
 
                             st.success(f"Exploration completed for: {selected_title}")
 
@@ -145,6 +153,25 @@ with col1:
     else:
         st.info("No search results to display. Please perform a search.")
 
+    # Spacer to push the video to the bottom
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+
+    # Placeholder for the Generated Video
+    video_placeholder = st.empty()
+
+    # Display Generated Video if available
+    if st.session_state['generated_video_path']:
+        video_placeholder.markdown("### Generated Video")
+        try:
+            video_placeholder.video(st.session_state['generated_video_path'], format="video/mp4")
+        except FileNotFoundError:
+            video_placeholder.error("Generated video file not found.")
+        except Exception as e:
+            video_placeholder.error(f"An error occurred while loading the video: {e}")
+    else:
+        # Optionally, you can leave the placeholder empty or display a message
+        pass
+
 # Second Column: Display the Summary and Generate Video
 with col2:
     st.header("Summary")
@@ -158,6 +185,7 @@ with col2:
             for idx, item in enumerate(summary):
                 title = item.get("title", "No Title")
                 script = item.get("script", "No Script Available")
+                caption = item.get("caption", "No Caption Available")
                 
                 with st.container():
                     # Create two columns: one for the summary and one for the button
@@ -176,6 +204,7 @@ with col2:
                         ">
                             <h4 style="color:#1e90ff;">{title}</h4>
                             <p>{script}</p>
+                            <p><strong>Caption: </strong><em>{caption}</em></p>
                         </div>
                         """, unsafe_allow_html=True)
                     
@@ -185,16 +214,45 @@ with col2:
                             selected_title = title
                             selected_script = script
 
-                            # Placeholder for video generation functionality
-                            # For now, we'll just set the video generation message
-                            st.session_state['video_generation_message'] = f"Video generation started for: {selected_title}"
+                            try:
+                                # Step 1: Send POST request to /transcribe
+                                with st.spinner('Generating subtitles for video'):
+                                    transcribe_url = "http://127.0.0.1:8000/transcribe"
+                                    transcribe_payload = {"title": selected_title}
+                                    transcribe_response = requests.post(transcribe_url, json=transcribe_payload)
+                                    transcribe_response.raise_for_status()
 
-            st.markdown("---")  # Separator
+                                # Step 2: Send GET request to /generate_images
+                                with st.spinner('Generating images'):
+                                    generate_images_url = "http://127.0.0.1:8000/generate_images"
+                                    generate_images_response = requests.get(generate_images_url)
+                                    generate_images_response.raise_for_status()
 
-            # Display Video Generation Message
-            if st.session_state['video_generation_message']:
-                st.markdown(f"**{st.session_state['video_generation_message']}**")
-        else:
-            st.warning("Unexpected summary format received.")
+                                # Step 3: Send POST request to /generate_video
+                                with st.spinner('Generating reel'):
+                                    generate_video_url = "http://127.0.0.1:8000/generate_video"
+                                    generate_video_response = requests.get(generate_video_url)
+                                    generate_video_response.raise_for_status()
+
+                                # Assuming the video is saved at './output_video.mp4'
+                                st.session_state['generated_video_path'] = "results/output_video.mp4"
+
+                                # st.success(f"Video generation completed for: {selected_title}")
+
+                                # Immediately display the generated video
+                                video_placeholder = st.empty()
+                                with video_placeholder:
+                                    st.markdown("### Generated Video")
+                                    st.video(st.session_state['generated_video_path'], format="video/mp4")
+
+                            except requests.exceptions.HTTPError as http_err:
+                                # Attempt to extract more detailed error message
+                                try:
+                                    error_detail = generate_video_response.json().get('detail', str(http_err))
+                                except:
+                                    error_detail = str(http_err)
+                                st.error(f"HTTP error occurred: {error_detail}")
+                            except Exception as e:
+                                st.error(f"An error occurred: {e}")
     else:
         st.info("No summary to display. Please explore a search result.")

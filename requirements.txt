@@ -7,4 +7,6 @@ langchain_mistralai==0.2.0
 pillow==10.4.0
 srt==3.5.3
 google-cloud-aiplatform==1.70.0
-
+edge-tts==6.1.12
+moviepy==1.0.3
+pysrt==1.1.2
