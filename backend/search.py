@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
+from backend.summarize import summarize_article
 
 # Step 1: Load environment variables from the .env file
 load_dotenv()
@@ -22,6 +23,10 @@ app = FastAPI()
 # Define a Pydantic model for the request body
 class SearchRequest(BaseModel):
     topic: str  # Only the topic comes from the frontend
+
+# Define a Pydantic model for the summarize request body
+class SummarizeRequest(BaseModel):
+    title: str  # Title of the search result to summarize
 
 # Define the POST endpoint for Tavily search
 @app.post("/search")
@@ -64,6 +69,48 @@ async def search_tavily(request: SearchRequest):
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
 
+# Define the POST endpoint for summarization
+@app.post("/summarize")
+async def summarize_content(request: SummarizeRequest):
+    # Path to the search results JSON file
+    results_file = "results/search_results.json"
+
+    # Check if the search results file exists
+    if not os.path.exists(results_file):
+        raise HTTPException(status_code=404, detail="Search results not found. Please perform a search first.")
+
+    # Load the search results
+    try:
+        with open(results_file, "r") as json_file:
+            search_results = json.load(json_file)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Failed to decode search results JSON.")
+
+    # Find the result with the matching title
+    result = next((item for item in search_results.get("results", []) if item.get("title") == request.title), None)
+
+    if not result:
+        raise HTTPException(status_code=404, detail=f"No search result found with title: {request.title}")
+
+    raw_content = result.get("raw_content")
+
+    if not raw_content:
+        raise HTTPException(status_code=404, detail="Raw content not available for the selected title.")
+
+    # Call the summarize function on the raw_content
+    try:
+        titles_scripts_questions = summarize_article(raw_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Summarization failed: {e}")
+
+    # Return the result
+    results = []
+    for result in titles_scripts_questions:
+        results.append({"title": result.title, "script": result.script, "follow_up_question": result.follow_up_question})
+
+    return results
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
