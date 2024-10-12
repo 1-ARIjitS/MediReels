@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # Center the logo and title using HTML within st.markdown
-st.image("logo.jpg", width=100)
+st.image("frontend/logo.jpg", width=100)
 st.title("MediReels")
 
 # Initialize session state to store search results, summaries, and generated video path
