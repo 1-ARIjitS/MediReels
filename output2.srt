@@ -1,0 +1,35 @@
+1
+00:00:00,100 --> 00:00:05,600
+Technology is Transforming Healthcare But There’s a Catch AI telemedicine
+
+2
+00:00:05,800 --> 00:00:10,550
+and SaaS-based platforms are reshaping hospital operations and patient care
+
+3
+00:00:10,912 --> 00:00:15,025
+While these tech solutions help streamline processes and improve efficiency
+
+4
+00:00:15,350 --> 00:00:18,500
+they can’t replace the human touch especially in areas like
+
+5
+00:00:18,512 --> 00:00:22,850
+physician shortages Tech can enhance how healthcare is delivered but
+
+6
+00:00:22,863 --> 00:00:26,337
+the industry must focus on developing human resources to ensure
+
+7
+00:00:26,350 --> 00:00:30,525
+both technology and physicians are available when needed Striking a
+
+8
+00:00:30,538 --> 00:00:34,275
+balance between innovation and personal care is key to healthcare’s
+
+9
+00:00:34,288 --> 00:00:34,825
+future
