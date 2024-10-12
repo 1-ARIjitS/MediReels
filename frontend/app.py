@@ -17,8 +17,11 @@ def is_valid(query):
 st.set_page_config(
     page_title="MediReels Search",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon="💬"
 )
+# Display the logo at the top of the page
+st.image("logo copy.jpg", width=100)
 
 # Streamlit UI
 st.title("MediReels Search")
