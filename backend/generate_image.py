@@ -2,23 +2,19 @@
 
 import os
 import srt
-import uuid
 import time
 from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_mistralai import ChatMistralAI
-from google.cloud.aiplatform.gapic import PredictionServiceClient
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Get variables from environment
-PROJECT_ID = os.getenv('PROJECT_ID')
-REGION = os.getenv('REGION')
-ENDPOINT_ID = os.getenv('ENDPOINT_ID')
-
 def parse_srt(file_path):
+    """
+    Parse the SRT file and return a list of subtitles.
+    """
     with open(file_path, 'r', encoding='utf-8') as file:
         srt_content = file.read()
     subtitles = list(srt.parse(srt_content))
@@ -33,15 +29,20 @@ def parse_srt(file_path):
     return parsed_subtitles
 
 def generate_prompt(subtitle_text, llm_chain):
-    # Use the LLM chain to generate the image prompt using 'predict'
+    """
+    Generate an image prompt based on the subtitle text using the LLM chain.
+    """
     input_text = subtitle_text.strip()
     prompt = llm_chain.predict(subtitle=input_text)
     return prompt.strip()
 
 def load_mistral_chain():
+    """
+    Load the Mistral LLM chain with the specified prompt template.
+    """
     # Initialize the Mistral model via LangChain
     llm = ChatMistralAI(
-        model="mistral-large-latest",
+        model="mistral-small-latest",
         temperature=0,
         max_retries=2,
     )
@@ -64,53 +65,59 @@ Image Prompt:
     llm_chain = LLMChain(prompt=prompt_template, llm=llm)
     return llm_chain
 
-def generate_image(prediction_client, endpoint, index, prompt):
-    # Prepare the instance for prediction
-    instance = {
-        "prompt": prompt,
-        "width": 512,
-        "height": 512,
-        "num_inference_steps": 30,
-        "guidance_scale": 7.5,
-        "num_images": 1,  # Uncomment if the model supports this parameter
+def generate_image(index, prompt):
+    """
+    Generate an image using the Hugging Face API and save it to the results/image/ folder.
+    """
+    import requests
+    from PIL import Image
+    from io import BytesIO
+
+    API_URL = "https://a39i6lutw4cmb1ag.us-east-1.aws.endpoints.huggingface.cloud/"
+    headers = {
+        "Accept": "image/png",
+        "Content-Type": "application/json",
+        # Include authorization if required
+        # "Authorization": f"Bearer {API_TOKEN}",
     }
-    #instances = [instance]
 
-    # Send the prediction request
-    response = prediction_client.predict(
-        endpoint=endpoint,
-        instances=instance
-    )
+    def query(payload):
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.content
 
-    # Handle the response
-    if response.predictions:
-        # Get only the first prediction
-        prediction = response.predictions[0]
+    try:
+        payload = {
+            "inputs": prompt,
+            "parameters": {}
+        }
 
-        # Decode the base64 image
-        import base64
-        from PIL import Image
-        from io import BytesIO
+        output = query(payload)
 
-        image_data = base64.b64decode(prediction)
-        image = Image.open(BytesIO(image_data))
+        # Open the image from bytes
+        image = Image.open(BytesIO(output))
+
+        # Ensure the results directory exists
+        image_dir = 'results/image/'
+        os.makedirs(image_dir, exist_ok=True)
 
         # Generate a filename with index
         image_filename = f"{index}.png"
-        image_path = os.path.join(RESULTS_DIR, image_filename)
+        image_path = os.path.join(image_dir, image_filename)
 
         # Check if the file exists
         if os.path.exists(image_path):
             # Append a timestamp to make it unique
             timestamp = int(time.time())
             image_filename = f"{index}_{timestamp}.png"
-            image_path = os.path.join(RESULTS_DIR, image_filename)
+            image_path = os.path.join(image_dir, image_filename)
 
         # Save the image
         image.save(image_path)
         print(f"Image saved to {image_path}\n")
-    else:
-        print(f"No predictions received for subtitle {index}")
+
+    except Exception as e:
+        print(f"Error generating image for subtitle {index}: {e}")
 
 def main():
     # Record the start time
@@ -122,20 +129,8 @@ def main():
     # Parse the SRT file
     subtitles = parse_srt(srt_file_path)
 
-    # Ensure the results directory exists
-    global RESULTS_DIR  # Declare as global since we're using it in another function
-    RESULTS_DIR = 'results/images/'
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-
     # Load the Mistral LLM chain
     llm_chain = load_mistral_chain()
-
-    # Initialize the Vertex AI Prediction client
-    client_options = {"api_endpoint": f"{REGION}-aiplatform.googleapis.com"}
-    prediction_client = PredictionServiceClient(client_options=client_options)
-
-    endpoint = prediction_client.endpoint_path(PROJECT_ID, REGION, ENDPOINT_ID)
-    print(f"Using endpoint: {endpoint}")
 
     # Step 1: Generate prompts for all subtitles
     prompts = []
@@ -156,11 +151,11 @@ def main():
         index = item['index']
         prompt = item['prompt']
 
-        # Generate image via Vertex AI Prediction
+        # Generate image via Hugging Face API
         try:
-            generate_image(prediction_client, endpoint, index, prompt)
+            generate_image(index, prompt)
         except Exception as e:
-            print(f"Error during prediction for subtitle {index}: {e}")
+            print(f"Error during image generation for subtitle {index}: {e}")
             continue  # Proceed to the next prompt
 
     # Record the end time
