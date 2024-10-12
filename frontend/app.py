@@ -24,7 +24,7 @@ st.set_page_config(
 st.image("logo.jpg", width=100)
 
 # Streamlit UI
-st.title("MediReels Search")
+st.title("MediReels")
 
 # Divide the page into two columns
 col1, col2 = st.columns([2, 3])  # Adjust the width ratios as needed
@@ -41,7 +41,7 @@ if 'video_generation_message' not in st.session_state:
 
 # First Column: Search Interface and Search Results
 with col1:
-    st.header("Search Interface")
+    st.header("Search")
     
     # Input field for topic
     topic = st.text_input("Enter a topic for search:", "")
@@ -90,7 +90,8 @@ with col1:
     st.markdown("---")  # Separator
 
     # Display Search Results
-    st.header("Search Results")
+    st.subheader(f"Trending topics")
+    # st.header("Search Results")
 
     # Check if search results are available
     if st.session_state['search_results']:
@@ -98,7 +99,7 @@ with col1:
         results = search_results.get("results", [])
 
         if results:
-            st.subheader(f"Results for: {search_results.get('query', topic)}")
+            # st.subheader(f"Results for: {search_results.get('query', topic)}")
 
             # Display each result as an expander with clickable titles and an "Explore" button
             for idx, result in enumerate(results):
