@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
-from backend.summarize import summarize_article
+from backend.summarize import summarize_article, query_is_valid
 
 # Step 1: Load environment variables from the .env file
 load_dotenv()
@@ -27,6 +27,12 @@ class SearchRequest(BaseModel):
 # Define a Pydantic model for the summarize request body
 class SummarizeRequest(BaseModel):
     title: str  # Title of the search result to summarize
+
+# Define the GET endpoint to check if the query is valid
+@app.get("/is_valid")
+async def is_valid_query(topic: str):
+    # Check if the query is valid
+    return {"is_valid": query_is_valid(topic)}
 
 # Define the POST endpoint for Tavily search
 @app.post("/search")
@@ -57,6 +63,8 @@ async def search_tavily(request: SearchRequest):
         search_results = response.json()
 
         # Write the response to a JSON file
+        if not os.path.exists("results"):
+            os.makedirs("results")
         with open("results/search_results.json", "w") as json_file:
             json.dump(search_results, json_file, indent=4)
 

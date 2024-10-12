@@ -1,6 +1,14 @@
 import streamlit as st
 import requests
 
+# Function to validate the search query
+def is_valid(query):
+    # send get request to /is_valid endpoint
+    response = requests.get("http://127.0.0.1:8000/is_valid", params={"topic": query})
+    if response.status_code == 200:
+        return response.json().get("is_valid", False)
+    return False
+
 # Set the page configuration to wide layout
 st.set_page_config(
     page_title="MediReels Search",
@@ -31,35 +39,40 @@ with col1:
     # When the user clicks the "Search" button
     if st.button("Search"):
         if topic:
-            # Backend FastAPI URL
-            backend_url = "http://127.0.0.1:8000/search"
+            # Check if the query is valid
+            if is_valid(topic):
+                # Backend FastAPI URL
+                backend_url = "http://127.0.0.1:8000/search"
 
-            # Prepare the request payload (only the topic is sent from the frontend)
-            payload = {
-                "topic": topic
-            }
+                # Prepare the request payload (only the topic is sent from the frontend)
+                payload = {
+                    "topic": topic
+                }
 
-            # Send the request to the FastAPI backend
-            try:
-                with st.spinner('Searching...'):
-                    response = requests.post(backend_url, json=payload)
-                    response.raise_for_status()  # Raise an error for bad status codes
-
-                # Parse and store the results in session state
-                st.session_state['search_results'] = response.json()
-                st.session_state['summary'] = None  # Reset summary when a new search is performed
-
-                st.success(f"Search completed for topic: {topic}")
-
-            except requests.exceptions.HTTPError as http_err:
-                # Attempt to extract more detailed error message
+                # Send the request to the FastAPI backend
                 try:
-                    error_detail = response.json().get('detail', str(http_err))
-                except:
-                    error_detail = str(http_err)
-                st.error(f"HTTP error occurred: {error_detail}")
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+                    with st.spinner('Searching...'):
+                        response = requests.post(backend_url, json=payload)
+                        response.raise_for_status()  # Raise an error for bad status codes
+
+                    # Parse and store the results in session state
+                    st.session_state['search_results'] = response.json()
+                    st.session_state['summary'] = None  # Reset summary when a new search is performed
+
+                    st.success(f"Search completed for topic: {topic}")
+
+                except requests.exceptions.HTTPError as http_err:
+                    # Attempt to extract more detailed error message
+                    try:
+                        error_detail = response.json().get('detail', str(http_err))
+                    except:
+                        error_detail = str(http_err)
+                    st.error(f"HTTP error occurred: {error_detail}")
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+            else:
+                # Display error message for invalid query
+                st.error("Query is not relevant to healthcare.")
         else:
             st.warning("Please enter a topic to search.")
 

@@ -14,13 +14,13 @@ class ArticleTopic(BaseModel):
         ...,
         title="Topic Title",
         description="The title of one of the key topics extracted from the article.",
-        examples=[
-            "The Impact of Telemedicine on Rural Healthcare",
-            "Advancements in Personalized Medicine",
-            "The Role of Artificial Intelligence in Diagnostic Imaging",
-            "Mental Health Awareness in the Workplace",
-            "Innovations in Minimally Invasive Surgical Techniques",
-        ],
+        # examples=[
+        #     "The Impact of Telemedicine on Rural Healthcare",
+        #     "Advancements in Personalized Medicine",
+        #     "The Role of Artificial Intelligence in Diagnostic Imaging",
+        #     "Mental Health Awareness in the Workplace",
+        #     "Innovations in Minimally Invasive Surgical Techniques",
+        # ],
     )
     script: str = Field(
         ...,
@@ -29,34 +29,34 @@ class ArticleTopic(BaseModel):
             "A concise (max 150 words) educational script of the topic suitable for a 1-minute educational social media reel. "
             "It should teach valuable insights, use clear and engaging language, and encourage deeper thinking or action."
         ),
-        examples=[
-            (
-                "Telemedicine has revolutionized access to healthcare in rural areas "
-                "by enabling remote consultations, reducing the need for travel, and providing timely medical advice. This innovation "
-                "has led to improved patient outcomes and greater convenience for both patients and healthcare providers. Stay tuned to learn "
-                "more about how telemedicine is transforming healthcare delivery."
-            ),
-            (
-                "Personalized medicine tailors medical treatment to individual characteristics, "
-                "such as genetics, lifestyle, and environment. This approach enhances the effectiveness of therapies and minimizes adverse effects, "
-                "marking a significant advancement in patient care. Discover how personalized medicine is shaping the future of healthcare."
-            ),
-            (
-                "AI enhances the accuracy and speed of image analysis, "
-                "assisting radiologists in detecting abnormalities early. These AI tools can analyze vast amounts of data quickly, leading to more efficient "
-                "and reliable diagnoses. Learn how AI is revolutionizing diagnostic processes in healthcare."
-            ),
-            (
-                "Recognizing and addressing mental health issues among employees is crucial. "
-                "Implementing supportive policies and fostering open dialogues can significantly improve overall well-being and productivity. Find out how workplaces "
-                "are prioritizing mental health."
-            ),
-            (
-                "Let's discuss Innovations in Minimally Invasive Surgical Techniques. These techniques reduce recovery time and minimize scarring by utilizing "
-                "smaller incisions and advanced technology. Innovations in this field lead to fewer complications and better patient outcomes compared to traditional surgery. "
-                "Stay with us to learn more about these groundbreaking surgical advancements."
-            ),
-        ],
+        # examples=[
+        #     (
+        #         "Telemedicine has revolutionized access to healthcare in rural areas "
+        #         "by enabling remote consultations, reducing the need for travel, and providing timely medical advice. This innovation "
+        #         "has led to improved patient outcomes and greater convenience for both patients and healthcare providers. Stay tuned to learn "
+        #         "more about how telemedicine is transforming healthcare delivery."
+        #     ),
+        #     (
+        #         "Personalized medicine tailors medical treatment to individual characteristics, "
+        #         "such as genetics, lifestyle, and environment. This approach enhances the effectiveness of therapies and minimizes adverse effects, "
+        #         "marking a significant advancement in patient care. Discover how personalized medicine is shaping the future of healthcare."
+        #     ),
+        #     (
+        #         "AI enhances the accuracy and speed of image analysis, "
+        #         "assisting radiologists in detecting abnormalities early. These AI tools can analyze vast amounts of data quickly, leading to more efficient "
+        #         "and reliable diagnoses. Learn how AI is revolutionizing diagnostic processes in healthcare."
+        #     ),
+        #     (
+        #         "Recognizing and addressing mental health issues among employees is crucial. "
+        #         "Implementing supportive policies and fostering open dialogues can significantly improve overall well-being and productivity. Find out how workplaces "
+        #         "are prioritizing mental health."
+        #     ),
+        #     (
+        #         "Let's discuss Innovations in Minimally Invasive Surgical Techniques. These techniques reduce recovery time and minimize scarring by utilizing "
+        #         "smaller incisions and advanced technology. Innovations in this field lead to fewer complications and better patient outcomes compared to traditional surgery. "
+        #         "Stay with us to learn more about these groundbreaking surgical advancements."
+        #     ),
+        # ],
     )
     follow_up_question: str = Field(
         ...,
@@ -65,13 +65,13 @@ class ArticleTopic(BaseModel):
             "A thought-provoking, exploratory question related to the topic that encourages viewers to watch more videos on the subject. "
             "It should introduce a related but distinct aspect of the topic not covered in the script and entice viewers to engage with additional content."
         ),
-        examples=[
-            "Do you know how telemedicine has evolved with the introduction of wearable health devices?",
-            "What are the latest breakthroughs in personalized medicine that could revolutionize treatment plans?",
-            "How is artificial intelligence transforming patient care beyond diagnostic imaging?",
-            "Can workplace mental health programs reduce employee turnover?",
-            "What are the future trends in minimally invasive surgeries that could change patient recovery times? Stay tuned to learn more!",
-        ],
+        # examples=[
+        #     "Do you know how telemedicine has evolved with the introduction of wearable health devices?",
+        #     "What are the latest breakthroughs in personalized medicine that could revolutionize treatment plans?",
+        #     "How is artificial intelligence transforming patient care beyond diagnostic imaging?",
+        #     "Can workplace mental health programs reduce employee turnover?",
+        #     "What are the future trends in minimally invasive surgeries that could change patient recovery times? Stay tuned to learn more!",
+        # ],
     )
 
     def __str__(self):
@@ -148,6 +148,11 @@ summary_chain = prompt_template | llm_structured
 def summarize_article(article: str) -> ArticleTopics:
     result = summary_chain.invoke(input={"article": article})
     return result
+
+def query_is_valid(topic: str) -> bool:
+    response =  llm.invoke(f"Is the query relevant to healthcare? Return True if yes, False otherwise. \n Query: {topic}")
+    content = response.content.lower()
+    return "true" in content
 
 
 if __name__ == "__main__":
