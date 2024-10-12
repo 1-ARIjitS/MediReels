@@ -22,15 +22,8 @@ st.set_page_config(
 )
 
 # Center the logo and title using HTML within st.markdown
-st.markdown(
-    """
-    <div style='display: flex; justify-content: center; align-items: center; flex-direction: column;'>
-        <img src='logo.jpg' width='100' alt='MediReels Logo'>
-        <h1 style='text-align: center;'>MediReels</h1>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.image("logo.jpg", width=100)
+st.title("MediReels")
 
 # Initialize session state to store search results, summaries, and generated video path
 if 'search_results' not in st.session_state:
