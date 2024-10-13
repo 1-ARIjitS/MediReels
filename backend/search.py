@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
-import time
 import asyncio
 from backend.summarize import (
     summarize_article,
@@ -314,14 +313,6 @@ async def generate_images():
             # Schedule the generate_image coroutine
             task = asyncio.create_task(generate_image(index, prompt, session))
             tasks.append(task)
-
-        # Optionally, limit concurrency using a semaphore
-        # semaphore = asyncio.Semaphore(5)  # Limit to 5 concurrent tasks
-        # async def sem_task(task):
-        #     async with semaphore:
-        #         await task
-
-        # tasks = [sem_task(task) for task in tasks]
 
         # Wait for all tasks to complete
         await asyncio.gather(*tasks)

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import uuid
 
 # Function to validate the search query
 def is_valid(query):
@@ -35,6 +36,9 @@ if 'summary' not in st.session_state:
 
 if 'generated_video_path' not in st.session_state:
     st.session_state['generated_video_path'] = None
+
+if 'generated_podcasts' not in st.session_state:
+    st.session_state['generated_podcasts'] = []  # List to store generated podcasts
 
 # --- Search Interface ---
 st.header("Search")
@@ -83,7 +87,6 @@ if st.button("Search"):
     else:
         st.warning("Please enter a topic to search.")
 
-
 # --- Trending Topics ---
 st.markdown("---")  # Separator
 
@@ -105,20 +108,12 @@ if st.session_state['search_results']:
                 # Display the content in the expanded section
                 st.write(f"**Content**: {result['content']}")
 
-                # Initialize podcast_generated flag in session_state for this topic
-                podcast_flag = f"podcast_generated_{idx}"
-                if podcast_flag not in st.session_state:
-                    st.session_state[podcast_flag] = False
-
                 # Create two buttons: "Explore Reels" and "Explore Podcasts"
                 cols = st.columns(2)
                 with cols[0]:
                     explore_reels = st.button("Explore Reels", key=f"explore_reels_{idx}")
                 with cols[1]:
                     explore_podcasts = st.button("Explore Podcasts", key=f"explore_podcasts_{idx}")
-
-                # Placeholder for podcast audio
-                podcast_placeholder = st.empty()
 
                 # Handle "Explore Reels" button click
                 if explore_reels:
@@ -160,10 +155,28 @@ if st.session_state['search_results']:
                             podcast_response = requests.post("http://127.0.0.1:8000/generate_podcast", json=podcast_payload)
                             podcast_response.raise_for_status()
 
-                        # Set the podcast_generated flag to True
-                        st.session_state[podcast_flag] = True
+                        # Generate a unique filename for the podcast to prevent overwriting
+                        podcast_filename = f"podcast_{idx}_{uuid.uuid4().hex[:8]}.mp3"
+                        podcast_path = os.path.join("results", podcast_filename)
 
-                        st.success(f"Podcast generated for: {selected_title}")
+                        # Move or rename the generated podcast to the unique filename
+                        # This assumes that the backend saves the podcast to 'results/podcast_final.mp3'
+                        original_podcast_path = "results/podcast_final.mp3"
+                        if os.path.exists(original_podcast_path):
+                            os.rename(original_podcast_path, podcast_path)
+                        else:
+                            st.error("Podcast generation succeeded but the audio file was not found.")
+                            podcast_path = None
+
+                        if podcast_path and os.path.exists(podcast_path):
+                            # Append the generated podcast to the session state list
+                            st.session_state['generated_podcasts'].append({
+                                "title": selected_title,
+                                "path": podcast_path
+                            })
+                            st.success(f"Podcast generated for: {selected_title}")
+                        else:
+                            st.error("Failed to locate the generated podcast file.")
 
                     except requests.exceptions.HTTPError as http_err:
                         # Attempt to extract more detailed error message
@@ -175,19 +188,6 @@ if st.session_state['search_results']:
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
 
-                # Display the podcast audio if generated
-                if st.session_state[podcast_flag]:
-                    audio_path = "results/podcast_final.mp3"
-                    if os.path.exists(audio_path):
-                        try:
-                            with open(audio_path, "rb") as audio_file:
-                                audio_bytes = audio_file.read()
-                            podcast_placeholder.audio(audio_bytes, format="audio/mp3")
-                        except Exception as e:
-                            podcast_placeholder.error(f"Error loading podcast: {e}")
-                    else:
-                        podcast_placeholder.error("Podcast audio file not found.")
-
     else:
         st.info("No results found for the given topic.")
 else:
@@ -195,8 +195,8 @@ else:
 
 st.markdown("---")  # Separator
 
-# --- Summary Section ---
-st.header("Summary")
+# --- Scripts Section ---
+st.header("Scripts")
 
 # Check if a summary is available
 if st.session_state['summary']:
@@ -287,7 +287,7 @@ if st.session_state['generated_video_path']:
     if os.path.exists(video_path):
         try:
             # Create three columns: left spacer, video, right spacer
-            left_col, video_col, right_col = st.columns([1, 2, 1])  # Adjust ratios as needed
+            left_col, video_col, right_col = st.columns([3, 1, 3])  # Adjust ratios as needed
             with video_col:
                 st.video(video_path)
         except Exception as e:
@@ -297,3 +297,27 @@ if st.session_state['generated_video_path']:
 else:
     st.info("No video generated yet. Please generate a video from the summary section.")
 
+st.markdown("---")  # Separator
+
+# --- Generated Podcasts Section ---
+st.header("Generated Podcasts")
+
+# Check if any podcasts have been generated
+if st.session_state['generated_podcasts']:
+    for podcast in st.session_state['generated_podcasts']:
+        podcast_title = podcast['title']
+        podcast_path = podcast['path']
+
+        st.subheader(f"Podcast for: {podcast_title}")
+
+        if os.path.exists(podcast_path):
+            try:
+                with open(podcast_path, "rb") as audio_file:
+                    audio_bytes = audio_file.read()
+                st.audio(audio_bytes, format="audio/mp3")
+            except Exception as e:
+                st.error(f"Error loading podcast for '{podcast_title}': {e}")
+        else:
+            st.error(f"Podcast audio file for '{podcast_title}' not found.")
+else:
+    st.info("No podcasts generated yet. Explore topics to generate podcasts.")

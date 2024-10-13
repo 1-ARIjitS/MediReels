@@ -1,8 +1,5 @@
-import os
 import srt
-import time
-from PIL import Image
-from io import BytesIO
+
 from langchain_core.prompts import PromptTemplate
 from langchain_mistralai import ChatMistralAI
 
@@ -29,6 +26,7 @@ def generate_prompt(subtitle_text, llm_chain):
     Generate an image prompt based on the subtitle text using the LLM chain.
     """
     input_text = subtitle_text.strip()
+    input_text += "DO NOT ADD ANY TEXT."
     prompt = llm_chain.predict(subtitle=input_text)
     return prompt.strip()
 
@@ -60,53 +58,3 @@ Image Prompt:
     # Create the LLM chain
     llm_chain = prompt_template | llm
     return llm_chain
-
-
-def main():
-    # Record the start time
-    start_time = time.time()
-
-    # Path to your SRT file # TODO: save to results dir
-    srt_file_path = './results/output2.srt'  # Replace with the path to your SRT file
-
-    # Parse the SRT file
-    subtitles = parse_srt(srt_file_path)
-
-    # Load the Mistral LLM chain
-    llm_chain = load_mistral_chain()
-
-    # Step 1: Generate prompts for all subtitles
-    prompts = []
-    for sub in subtitles:
-        index = sub['index']
-        content = sub['content']
-
-        # Generate image prompt using Mistral model
-        prompt = generate_prompt(content, llm_chain)
-        print(f"Subtitle {index}: {content}")
-        print(f"Generated Prompt: {prompt}\n")
-
-        # Store the prompt with its index
-        prompts.append({'index': index, 'prompt': prompt})
-
-    # Step 2: Generate images from the prompts
-    for item in prompts:
-        index = item['index']
-        prompt = item['prompt']
-
-        # Generate image via Hugging Face API
-        try:
-            generate_image(index, prompt)
-        except Exception as e:
-            print(f"Error during image generation for subtitle {index}: {e}")
-            continue  # Proceed to the next prompt
-
-    # Record the end time
-    end_time = time.time()
-
-    # Calculate and print the total execution time
-    total_time = end_time - start_time
-    print(f"\nTotal execution time: {total_time:.2f} seconds")
-
-if __name__ == '__main__':
-    main()
