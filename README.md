@@ -11,4 +11,8 @@ MediReels is a revolutionary healthcare communication platform that simplifies c
 
 https://huggingface.co/spaces/mistralalanhackathon/MediReels
 
+## DevPost
+
+https://devpost.com/software/medireels
+
 
