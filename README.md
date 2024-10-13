@@ -2,7 +2,7 @@
 
 
 ## MediReels
-![Logo](./frontend/logo.jpg)
+<img src="./frontend/logo.jpg" alt="Logo" width="200" height="200">
 
 MediReels is a revolutionary healthcare communication platform that simplifies complex medical information through engaging short videos and podcasts
 
