@@ -1,15 +1,14 @@
 # Mistral-X-Alan-Hackathon
 
 
+## MediReels
+![Logo](./frontend/logo.jpg)
 
-# Backend
+MediReels is a revolutionary healthcare communication platform that simplifies complex medical information through engaging short videos and podcasts
 
-'''
-uvicorn backend.search:app --host 0.0.0.0 --port 8000 --reload 
-'''
 
-# Frontend
+## HuggingFace Space
 
-'''
-streamlit run frontend/app.py
-'''
+https://huggingface.co/spaces/mistralalanhackathon/MediReels
+
+
