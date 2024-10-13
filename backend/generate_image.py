@@ -1,7 +1,8 @@
 import os
 import srt
 import time
-from dotenv import load_dotenv
+from PIL import Image
+from io import BytesIO
 from langchain_core.prompts import PromptTemplate
 from langchain_mistralai import ChatMistralAI
 
@@ -60,59 +61,6 @@ Image Prompt:
     llm_chain = prompt_template | llm
     return llm_chain
 
-def generate_image(index, prompt):
-    """
-    Generate an image using the Hugging Face API and save it to the results/image/ folder.
-    """
-    import requests
-    from PIL import Image
-    from io import BytesIO
-
-    API_URL = "https://a39i6lutw4cmb1ag.us-east-1.aws.endpoints.huggingface.cloud/"
-    headers = {
-        "Accept": "image/png",
-        "Content-Type": "application/json",
-        # Include authorization if required
-        # "Authorization": f"Bearer {API_TOKEN}",
-    }
-
-    def query(payload):
-        response = requests.post(API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.content
-
-    try:
-        payload = {
-            "inputs": prompt,
-            "parameters": {}
-        }
-
-        output = query(payload)
-
-        # Open the image from bytes
-        image = Image.open(BytesIO(output))
-
-        # Ensure the results directory exists
-        image_dir = 'results/image/'
-        os.makedirs(image_dir, exist_ok=True)
-
-        # Generate a filename with index
-        image_filename = f"{index}.png"
-        image_path = os.path.join(image_dir, image_filename)
-
-        # Check if the file exists
-        if os.path.exists(image_path):
-            # Append a timestamp to make it unique
-            timestamp = int(time.time())
-            image_filename = f"{index}_{timestamp}.png"
-            image_path = os.path.join(image_dir, image_filename)
-
-        # Save the image
-        image.save(image_path)
-        print(f"Image saved to {image_path}\n")
-
-    except Exception as e:
-        print(f"Error generating image for subtitle {index}: {e}")
 
 def main():
     # Record the start time

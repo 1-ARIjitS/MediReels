@@ -4,15 +4,14 @@ import os
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import PromptTemplate
 import srt
-import requests
 from PIL import Image
 from io import BytesIO
 import time
 
 
 llm = ChatMistralAI(
-    model="mistral-small-latest",
-    temperature=0.5,
+    model="mistral-large-latest",
+    temperature=0,
     max_retries=2,
 )
 
@@ -178,11 +177,10 @@ Image Prompt:
 
 transcriber_chain = load_mistral_chain()
 
-def generate_image(index, prompt):
+async def generate_image(index, prompt, session):
     """
-    Generate an image using the Hugging Face API and save it to the results/image/ folder.
+    Generate an image using the Hugging Face API asynchronously and save it to the results/image/ folder.
     """
-
     API_URL = "https://a39i6lutw4cmb1ag.us-east-1.aws.endpoints.huggingface.cloud/"
     headers = {
         "Accept": "image/png",
@@ -191,10 +189,10 @@ def generate_image(index, prompt):
         # "Authorization": f"Bearer {API_TOKEN}",
     }
 
-    def query(payload):
-        response = requests.post(API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.content
+    async def query(payload):
+        async with session.post(API_URL, headers=headers, json=payload) as response:
+            response.raise_for_status()
+            return await response.read()
 
     try:
         payload = {
@@ -202,7 +200,7 @@ def generate_image(index, prompt):
             "parameters": {}
         }
 
-        output = query(payload)
+        output = await query(payload)
 
         # Open the image from bytes
         image = Image.open(BytesIO(output))
@@ -219,7 +217,7 @@ def generate_image(index, prompt):
         if os.path.exists(image_path):
             # Append a timestamp to make it unique
             timestamp = int(time.time())
-            image_filename = f"{index}_{timestamp}.png"
+            image_filename = f"{index}{timestamp}.png"
             image_path = os.path.join(image_dir, image_filename)
 
         # Save the image

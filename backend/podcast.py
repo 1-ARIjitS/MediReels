@@ -1,5 +1,4 @@
 import os
-import random
 import gender_guesser.detector as gender
 from dotenv import load_dotenv
 import json
@@ -59,18 +58,6 @@ def append_audio(audio_files, output_filename):
 
 # Main function to generate the podcast
 async def generate_podcast(podcast_data):
-    # Random intro and outro music
-    intro_music = random.choice([
-        "podcast_audio/music/intro_music/intro_music_1.mp3", 
-        "podcast_audio/music/intro_music/intro_music_2.mp3", 
-        "podcast_audio/music/intro_music/intro_music_3.mp3"
-    ])
-
-    outro_music = random.choice([
-        "podcast_audio/music/outro_music/outro_music_1.mp3", 
-        "podcast_audio/music/outro_music/outro_music_2.mp3", 
-        "podcast_audio/music/outro_music/outro_music_3.mp3"
-    ])
 
     # Get host and guest names
     host_name = podcast_data['host_name']
@@ -110,7 +97,7 @@ async def generate_podcast(podcast_data):
     audio_files.append("podcast_audio/music/outro_music/outro_music_1.mp3")
 
     # Combine all audio files into one final podcast file
-    final_podcast_file = "podcast_final.mp3"
+    final_podcast_file = "results/podcast_final.mp3"
     append_audio(audio_files, final_podcast_file)
     print(f"Podcast saved as {final_podcast_file}")
 

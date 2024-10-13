@@ -2,7 +2,7 @@ import os
 import json
 from dotenv import load_dotenv
 from langchain_mistralai import ChatMistralAI
-from gtts import gTTS
+# from gtts import gTTS
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -68,18 +68,13 @@ def generate_script(article_text):
 # Save the generated podcast script to a JSON file
 def save_script_to_json(script, filename='podcast_script.json'):
     # Ensure the directory exists
-    os.makedirs('podcast_res', exist_ok=True)
-
+    os.makedirs('results', exist_ok=True)
     script= script.strip()
-
     script= script[7:-3]
-
-    print(script)
-
     dict= json.loads(script)
     
     # Create the full file path
-    file_path = os.path.join('podcast_res', filename)
+    file_path = os.path.join('results', filename)
     
     # Write the script to a JSON file
     with open(file_path, 'w') as json_file:

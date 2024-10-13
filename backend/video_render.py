@@ -39,6 +39,15 @@ class VideoCreator:
     def resize_images_in_folder(self):
         os.makedirs(self.output_folder, exist_ok=True)
 
+        # remove files in output folder
+        for filename in os.listdir(self.output_folder):
+            file_path = os.path.join(self.output_folder, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                print(f"Error deleting file: {file_path}")
+
         for filename in os.listdir(self.input_folder):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
                 input_path = os.path.join(self.input_folder, filename)

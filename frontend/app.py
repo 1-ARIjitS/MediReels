@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 
 # Function to validate the search query
 def is_valid(query):
@@ -25,7 +26,7 @@ st.set_page_config(
 st.image("frontend/logo.jpg", width=100)
 st.title("MediReels")
 
-# Initialize session state to store search results, summaries, and generated video path
+# Initialize session state to store search results, summaries, generated video path, and podcasts
 if 'search_results' not in st.session_state:
     st.session_state['search_results'] = None
 
@@ -87,7 +88,6 @@ if st.button("Search"):
 st.markdown("---")  # Separator
 
 # --- Search Results ---
-# st.header("Search Results")
 st.subheader("Trending Topics")
 
 # Check if search results are available
@@ -96,16 +96,32 @@ if st.session_state['search_results']:
     results = search_results.get("results", [])
 
     if results:
-        # Display each result as an expander with clickable titles and an "Explore" button
+        # Display each result as an expander with clickable titles and "Explore Reels" and "Explore Podcasts" buttons
         for idx, result in enumerate(results):
             with st.expander(f"{result['title']}"):
                 # Display the URL as a clickable link
                 st.markdown(f"[Visit this result]({result['url']})")
-                
+
                 # Display the content in the expanded section
                 st.write(f"**Content**: {result['content']}")
 
-                if st.button("Explore long-form content", key=f"explore_{idx}"):
+                # Initialize podcast_generated flag in session_state for this topic
+                podcast_flag = f"podcast_generated_{idx}"
+                if podcast_flag not in st.session_state:
+                    st.session_state[podcast_flag] = False
+
+                # Create two buttons: "Explore Reels" and "Explore Podcasts"
+                cols = st.columns(2)
+                with cols[0]:
+                    explore_reels = st.button("Explore Reels", key=f"explore_reels_{idx}")
+                with cols[1]:
+                    explore_podcasts = st.button("Explore Podcasts", key=f"explore_podcasts_{idx}")
+
+                # Placeholder for podcast audio
+                podcast_placeholder = st.empty()
+
+                # Handle "Explore Reels" button click
+                if explore_reels:
                     selected_title = result['title']
                     # Backend Summarize API URL
                     backend_summarize_url = "http://127.0.0.1:8000/summarize"
@@ -114,16 +130,16 @@ if st.session_state['search_results']:
                     payload = {"title": selected_title}
 
                     try:
-                        with st.spinner('Exploring...'):
+                        with st.spinner('Exploring Reels...'):
                             summarize_response = requests.post(backend_summarize_url, json=payload)
                             summarize_response.raise_for_status()
                             summary = summarize_response.json()
-                        
+
                         # Store the summary in session state
                         st.session_state['summary'] = summary
                         st.session_state['generated_video_path'] = None  # Reset generated video path
 
-                        st.success(f"Exploration completed for: {selected_title}")
+                        st.success(f"Reels exploration completed for: {selected_title}")
 
                     except requests.exceptions.HTTPError as http_err:
                         # Attempt to extract more detailed error message
@@ -135,36 +151,43 @@ if st.session_state['search_results']:
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
 
-                # "Explore" button for this specific result
-                if st.button("Explore short-form content", key=f"explore_{idx}"):
+                # Handle "Explore Podcasts" button click
+                if explore_podcasts:
                     selected_title = result['title']
-                    # Backend Summarize API URL
-                    backend_summarize_url = "http://127.0.0.1:8000/summarize"
-
-                    # Prepare the payload with the selected title
-                    payload = {"title": selected_title}
-
                     try:
-                        with st.spinner('Exploring...'):
-                            summarize_response = requests.post(backend_summarize_url, json=payload)
-                            summarize_response.raise_for_status()
-                            summary = summarize_response.json()
-                        
-                        # Store the summary in session state
-                        st.session_state['summary'] = summary
-                        st.session_state['generated_video_path'] = None  # Reset generated video path
+                        with st.spinner('Generating podcast...'):
+                            podcast_payload = {"title": selected_title}
+                            podcast_response = requests.post("http://127.0.0.1:8000/generate_podcast", json=podcast_payload)
+                            podcast_response.raise_for_status()
 
-                        st.success(f"Exploration completed for: {selected_title}")
+                        # Set the podcast_generated flag to True
+                        st.session_state[podcast_flag] = True
+
+                        st.success(f"Podcast generated for: {selected_title}")
 
                     except requests.exceptions.HTTPError as http_err:
                         # Attempt to extract more detailed error message
                         try:
-                            error_detail = summarize_response.json().get('detail', str(http_err))
+                            error_detail = podcast_response.json().get('detail', str(http_err))
                         except:
                             error_detail = str(http_err)
                         st.error(f"HTTP error occurred: {error_detail}")
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
+
+                # Display the podcast audio if generated
+                if st.session_state[podcast_flag]:
+                    audio_path = "results/podcast_final.mp3"
+                    if os.path.exists(audio_path):
+                        try:
+                            with open(audio_path, "rb") as audio_file:
+                                audio_bytes = audio_file.read()
+                            podcast_placeholder.audio(audio_bytes, format="audio/mp3")
+                        except Exception as e:
+                            podcast_placeholder.error(f"Error loading podcast: {e}")
+                    else:
+                        podcast_placeholder.error("Podcast audio file not found.")
+
     else:
         st.info("No results found for the given topic.")
 else:
@@ -185,11 +208,11 @@ if st.session_state['summary']:
             title = item.get("title", "No Title")
             script = item.get("script", "No Script Available")
             caption = item.get("caption", "No Caption Available")
-            
+
             with st.container():
                 # Create two columns: one for the summary and one for the button
                 summary_col, button_col = st.columns([4, 1])
-                
+
                 with summary_col:
                     # Styled summary box
                     st.markdown(f"""
@@ -206,7 +229,7 @@ if st.session_state['summary']:
                         <p><strong>Caption: </strong><em>{caption}</em></p>
                     </div>
                     """, unsafe_allow_html=True)
-                
+
                 with button_col:
                     # "Generate Video" button for this specific summary
                     if st.button("Generate Video", key=f"generate_{idx}"):
@@ -215,20 +238,20 @@ if st.session_state['summary']:
 
                         try:
                             # Step 1: Send POST request to /transcribe
-                            with st.spinner('Generating subtitles for video'):
+                            with st.spinner('Generating subtitles for video...'):
                                 transcribe_url = "http://127.0.0.1:8000/transcribe"
                                 transcribe_payload = {"title": selected_title}
                                 transcribe_response = requests.post(transcribe_url, json=transcribe_payload)
                                 transcribe_response.raise_for_status()
 
                             # Step 2: Send GET request to /generate_images
-                            with st.spinner('Generating images'):
+                            with st.spinner('Generating images...'):
                                 generate_images_url = "http://127.0.0.1:8000/generate_images"
                                 generate_images_response = requests.get(generate_images_url)
                                 generate_images_response.raise_for_status()
 
                             # Step 3: Send GET request to /generate_video
-                            with st.spinner('Generating reel'):
+                            with st.spinner('Generating reel...'):
                                 generate_video_url = "http://127.0.0.1:8000/generate_video"
                                 generate_video_response = requests.get(generate_video_url)
                                 generate_video_response.raise_for_status()
@@ -238,7 +261,7 @@ if st.session_state['summary']:
 
                             # Immediately display the generated video
                             st.success(f"Video generation completed for: {selected_title}")
-                            
+
                         except requests.exceptions.HTTPError as http_err:
                             # Attempt to extract more detailed error message
                             try:
@@ -260,11 +283,17 @@ st.header("Generated Video")
 
 # Display Generated Video if available
 if st.session_state['generated_video_path']:
-    try:
-        st.video(st.session_state['generated_video_path'], format="video/mp4")
-    except FileNotFoundError:
+    video_path = st.session_state['generated_video_path']
+    if os.path.exists(video_path):
+        try:
+            # Create three columns: left spacer, video, right spacer
+            left_col, video_col, right_col = st.columns([1, 2, 1])  # Adjust ratios as needed
+            with video_col:
+                st.video(video_path)
+        except Exception as e:
+            st.error(f"An error occurred while loading the video: {e}")
+    else:
         st.error("Generated video file not found.")
-    except Exception as e:
-        st.error(f"An error occurred while loading the video: {e}")
 else:
     st.info("No video generated yet. Please generate a video from the summary section.")
+
